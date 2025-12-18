@@ -7,6 +7,7 @@ import 'effect.dart';
 // We import the internal src file because the budget manager is an
 // implementation detail of ParticleEffect.
 import 'effects/particle_effect_clean.dart';
+import 'performance_utils.dart';
 
 /// Controller to trigger effects at runtime.
 ///
@@ -14,21 +15,29 @@ import 'effects/particle_effect_clean.dart';
 /// attached to a single [EffectLayer] via an internal attach/detach API.
 class EffectController {
   void Function(Effect)? _playHandler;
+  void Function()? _clearHandler;
 
   /// Attach internal play handler (used by EffectLayer).
   @protected
-  void attach(void Function(Effect) handler) {
+  void attach(void Function(Effect) handler, void Function() clearHandler) {
     _playHandler = handler;
+    _clearHandler = clearHandler;
   }
 
   @protected
   void detach() {
     _playHandler = null;
+    _clearHandler = null;
   }
 
   /// Trigger an effect to play immediately.
   void play(Effect effect) {
     _playHandler?.call(effect);
+  }
+
+  /// Clear all active effects immediately.
+  void clearAll() {
+    _clearHandler?.call();
   }
 }
 
@@ -80,11 +89,16 @@ class _EffectLayerState extends State<EffectLayer>
         _startEffect(e, now);
       }
     });
-    widget.controller?.attach(_startEffectFromController);
+    widget.controller?.attach(_startEffectFromController, _clearAllEffects);
   }
 
   void _startEffectFromController(Effect e) {
     _startEffect(e, _stopwatch.elapsed);
+  }
+
+  void _clearAllEffects() {
+    _active.clear();
+    setState(() {});
   }
 
   void _startEffect(Effect effect, Duration now) {
@@ -103,6 +117,9 @@ class _EffectLayerState extends State<EffectLayer>
     // Reset per-frame shared particle budget so stacked ParticleEffects
     // fairly share the budget each frame.
     ParticleEffect.resetBudget();
+
+    // Record frame time for adaptive quality management
+    final frameStart = DateTime.now();
 
     if (_active.isEmpty) {
       _ticker.stop();
@@ -136,6 +153,10 @@ class _EffectLayerState extends State<EffectLayer>
       _active.remove(r);
     }
 
+    // Record frame time for performance monitoring
+    final frameTime = DateTime.now().difference(frameStart);
+    AdaptiveQualityManager.recordFrameTime(frameTime);
+
     // trigger repaint with new accumulators
     _tickId = (_tickId + 1) & 0x3fffffff;
     setState(() {});
@@ -146,7 +167,7 @@ class _EffectLayerState extends State<EffectLayer>
     super.didUpdateWidget(oldWidget);
     if (oldWidget.controller != widget.controller) {
       oldWidget.controller?.detach();
-      widget.controller?.attach(_startEffectFromController);
+      widget.controller?.attach(_startEffectFromController, _clearAllEffects);
     }
     // If provided effects list changed we start any new ones.
     if (!listEquals(oldWidget.effects, widget.effects)) {

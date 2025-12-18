@@ -13,3 +13,7 @@ export 'src/effects/shake_effect.dart';
 export 'src/effects/flash_effect.dart';
 export 'src/effects/ripple_effect.dart';
 export 'src/effects/particle_effect.dart';
+export 'src/effects/trail_effect.dart';
+export 'src/effects/glow_effect.dart';
+export 'src/effects/beam_effect.dart';
+export 'src/effects/scale_effect.dart';
