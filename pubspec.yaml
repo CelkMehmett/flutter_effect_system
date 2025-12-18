@@ -17,6 +17,6 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
-homepage: https://github.com/your-username/flutter_effect_system
-repository: https://github.com/your-username/flutter_effect_system
+homepage: https://github.com/CelkMehmett/flutter_effect_system
+repository: https://github.com/CelkMehmett/flutter_effect_system
 license: MIT
